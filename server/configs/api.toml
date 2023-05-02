@@ -1,0 +1,5 @@
+bind_addr = ":8080"
+log_level = "debug"
+
+[storage]
+db_url = "host=localhost dbname=PhoneTracker sslmode=disable user=postgres password=hnxJpVsk3r"

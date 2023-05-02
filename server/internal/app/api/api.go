@@ -1,0 +1,97 @@
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+	"io"
+	"net/http"
+	"server/internal/app/config"
+	"server/internal/app/models"
+	"server/internal/app/storage"
+)
+
+type Server struct {
+	config  *config.Config
+	logger  *logrus.Logger
+	router  *mux.Router
+	storage *storage.Storage
+}
+
+func New(config *config.Config) *Server {
+	return &Server{
+		config: config,
+		logger: logrus.New(),
+		router: mux.NewRouter(),
+	}
+}
+
+func (s *Server) Start() error {
+	if err := s.configureLogger(); err != nil {
+		return err
+	}
+
+	s.configureRouter()
+
+	if err := s.configureStorage(); err != nil {
+		return err
+	}
+
+	s.logger.Info("Starting server...")
+
+	return http.ListenAndServe(s.config.BindAddr, s.router)
+}
+
+func (s *Server) configureLogger() error {
+	level, err := logrus.ParseLevel(s.config.LogLevel)
+	if err != nil {
+		return err
+	}
+
+	s.logger.SetLevel(level)
+
+	return nil
+}
+
+func (s *Server) configureRouter() {
+	s.router.HandleFunc("/test", s.handleTest())
+	//handlers ...
+	s.router.HandleFunc("/phone_info", s.handlePhoneInfo())
+}
+
+func (s *Server) configureStorage() error {
+	st := storage.New(s.config.Storage)
+	if err := st.Open(); err != nil {
+		return err
+	}
+
+	s.storage = st
+
+	return nil
+}
+
+func (s *Server) handleTest() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "Just test")
+	}
+}
+
+func (s *Server) handlePhoneInfo() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var resp *models.Info
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			fmt.Fprintf(w, "err %q\n", err, err.Error())
+			return
+		}
+
+		err = json.Unmarshal(body, &resp)
+		if err != nil {
+			fmt.Println(w, "can't unmarshal: ", err.Error())
+			return
+		}
+		fmt.Println(resp.SdInfo[0].UsedSpace)
+	}
+}
