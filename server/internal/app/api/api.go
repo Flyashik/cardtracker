@@ -79,19 +79,49 @@ func (s *Server) handleTest() http.HandlerFunc {
 
 func (s *Server) handlePhoneInfo() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var resp *models.Info
+		var (
+			resp *models.Info
+		)
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			fmt.Fprintf(w, "err %q\n", err, err.Error())
+			s.logger.Error(err)
 			return
 		}
 
 		err = json.Unmarshal(body, &resp)
 		if err != nil {
-			fmt.Println(w, "can't unmarshal: ", err.Error())
+			s.logger.Error(err)
 			return
 		}
-		fmt.Println(resp.SdInfo[0].UsedSpace)
+
+		resp.Phone.SimSlots = len(resp.SimInfo)
+		resp.Phone.SdSlots = len(resp.SdInfo)
+
+		phone, err := s.storage.Phone().Create(&resp.Phone)
+		if err != nil {
+			s.logger.Error(err)
+			return
+		}
+
+		s.storage.Sim().RemovePhoneId(phone.Id)
+		for _, sim := range resp.SimInfo {
+			_, err := s.storage.Sim().Create(&sim, phone)
+			if err != nil {
+				s.logger.Error(err)
+				return
+			}
+		}
+
+		s.storage.SdCard().RemovePhoneId(phone.Id)
+		for _, sd := range resp.SdInfo {
+			_, err := s.storage.SdCard().Create(&sd, phone)
+			if err != nil {
+				s.logger.Error(err)
+				return
+			}
+		}
+
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
 	}
 }

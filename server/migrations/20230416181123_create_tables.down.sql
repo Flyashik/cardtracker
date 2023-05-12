@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS sim_cards;
+
+DROP TABLE IF EXISTS sd_cards;
+
+DROP TABLE IF EXISTS phones;

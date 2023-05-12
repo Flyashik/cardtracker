@@ -10,6 +10,8 @@ type Storage struct {
 	config          *DbConfig
 	db              *sql.DB
 	phoneRepository *PhoneRepository
+	simRepository   *SimRepository
+	sdRepository    *SdRepository
 }
 
 func New(config *DbConfig) *Storage {
@@ -47,4 +49,28 @@ func (s *Storage) Phone() *PhoneRepository {
 	}
 
 	return s.phoneRepository
+}
+
+func (s *Storage) Sim() *SimRepository {
+	if s.simRepository != nil {
+		return s.simRepository
+	}
+
+	s.simRepository = &SimRepository{
+		storage: s,
+	}
+
+	return s.simRepository
+}
+
+func (s *Storage) SdCard() *SdRepository {
+	if s.sdRepository != nil {
+		return s.sdRepository
+	}
+
+	s.sdRepository = &SdRepository{
+		storage: s,
+	}
+
+	return s.sdRepository
 }
