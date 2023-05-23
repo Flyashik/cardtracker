@@ -1,0 +1,15 @@
+Company,MID,OEMID,Card brands found with this MID/OEMID
+Panasonic,0x000001,PA,Panasonic
+Toshiba,0x000002,TM,Toshiba
+SanDisk,0x000003,SD (some PT),SanDisk
+Samsung,0x00001b,SM,ProGrade/Samsung
+AData,0x00001d,AD,AData
+Phison,0x000027,PH,AgfaPhoto/Delkin/Integral/Lexar/Patriot/PNY/Polaroid/Sony/Verbatim
+Lexar,0x000028,BE,Lexar/PNY/ProGrade
+Silicon Power,0x000031,SP,Silicon Power
+Kingston,0x000041,42,Kingston
+Transcend,0x000074,JE or J`,Transcend
+Patriot(?),0x000076,??,Patriot
+Sony(?),0x000082,JT,Gobe/Sony
+,0x00009c,SO,Angelbird (V60)/Hoodman
+,0x00009c,BE,Angelbird (V90)

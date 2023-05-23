@@ -1,6 +1,14 @@
 package helper
 
-import "server/internal/app/models"
+import (
+	"encoding/csv"
+	"io"
+	"os"
+	"path/filepath"
+	"server/internal/app/models"
+)
+
+const DataPath = "data"
 
 func IsEmptySdSlot(sd models.SdInfo) bool {
 	if sd.SerialNo == "" && sd.SdManufacturerId == "" && sd.FreeSpace == 0 && sd.UsedSpace == 0 && sd.TotalSpace == 0 {
@@ -16,4 +24,62 @@ func IsEmptySimSlot(sim models.SimInfo) bool {
 	}
 
 	return false
+}
+
+func ConvertModelTagToMarketingName(modelTag string) (string, error) {
+	f, err := os.Open(filepath.Join(DataPath, "supported_devices.csv"))
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.Comma = ','
+
+	_, err = reader.Read()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		rec, err := reader.Read()
+		if err != nil {
+			return "", err
+		}
+		if err == io.EOF {
+			return "", nil
+		}
+		if rec[2] == modelTag {
+			return rec[1], nil
+		}
+	}
+}
+
+func ConvertManufacturerIdToCompanyName(manufacturerId string) (string, error) {
+	f, err := os.Open(filepath.Join(DataPath, "sd_cards.csv"))
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.Comma = ','
+
+	_, err = reader.Read()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		rec, err := reader.Read()
+		if err != nil {
+			return "", err
+		}
+		if err == io.EOF {
+			return "", nil
+		}
+		if rec[1] == manufacturerId {
+			return rec[0], nil
+		}
+	}
 }

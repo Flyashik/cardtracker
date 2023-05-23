@@ -32,3 +32,34 @@ func (r *SdRepository) RemovePhoneId(phoneId int) {
 										SET phone_id = null
 										WHERE phone_id = $1`, phoneId)
 }
+
+func (r *SdRepository) SelectAll() ([]models.SdInfo, error) {
+	rows, err := r.storage.db.Query(`SELECT * FROM sd_cards`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sdCards []models.SdInfo
+
+	for rows.Next() {
+		var sd models.SdInfo
+
+		err := rows.Scan(
+			&sd.Id,
+			&sd.PhoneId,
+			&sd.SdManufacturerId,
+			&sd.SerialNo,
+			&sd.TotalSpace,
+			&sd.UsedSpace,
+			&sd.FreeSpace,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		sdCards = append(sdCards, sd)
+	}
+
+	return sdCards, nil
+}

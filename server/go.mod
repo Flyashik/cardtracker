@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/lib/pq v1.10.8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rs/cors v1.9.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect

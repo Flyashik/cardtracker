@@ -1,7 +1,7 @@
 package models
 
 type Phone struct {
-	Id             int
+	Id             int      `json:"phone_id"`
 	Manufacturer   string   `json:"manufacturer"`
 	ModelTag       string   `json:"model_tag"`
 	ModelNumber    string   `json:"model_number"`
@@ -11,6 +11,6 @@ type Phone struct {
 	Firmware       string   `json:"firmware"`
 	Bootloader     string   `json:"bootloader"`
 	SupportedArchs []string `json:"supported_archs"`
-	SimSlots       int
-	SdSlots        int
+	SimSlots       int      `json:"sim_slots"`
+	SdSlots        int      `json:"sd_slots"`
 }

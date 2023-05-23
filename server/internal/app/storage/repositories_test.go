@@ -99,11 +99,11 @@ func TestSdRepository_Create(t *testing.T) {
 	assert.NotNil(t, sd)
 }
 
-func TestPhoneRepository_SelectByModelTag(t *testing.T) {
+func TestPhoneRepository_SelectByModelNumber(t *testing.T) {
 	s, teardown := storage.TestStorage(t, dbUrl)
 	defer teardown("phones")
 
-	_, err := s.Phone().SelectByModelTag("beyond1")
+	_, err := s.Phone().SelectByModelNumber("SM-G973F/DS")
 	assert.Error(t, err)
 
 	s.Phone().Create(&models.Phone{
@@ -124,7 +124,7 @@ func TestPhoneRepository_SelectByModelTag(t *testing.T) {
 		SdSlots:  1,
 	})
 
-	p, err := s.Phone().SelectByModelTag("beyond1")
+	p, err := s.Phone().SelectByModelNumber("SM-G973F/DS")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 }

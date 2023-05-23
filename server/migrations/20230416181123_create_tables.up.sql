@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS phones (
     phone_id SERIAL PRIMARY KEY,
     manufacturer VARCHAR(255) NOT NULL,
-    model_tag VARCHAR(255) UNIQUE NOT NULL,
-    model_number VARCHAR(255) NOT NULL,
+    model_tag VARCHAR(255) NOT NULL,
+    model_number VARCHAR(255) UNIQUE NOT NULL,
     os_version VARCHAR(255) NOT NULL,
     api_version VARCHAR(255) NOT NULL,
     cpu VARCHAR(255) NOT NULL,

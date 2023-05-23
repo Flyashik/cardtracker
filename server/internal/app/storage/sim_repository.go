@@ -32,3 +32,31 @@ func (r *SimRepository) RemovePhoneId(phoneId int) {
 									SET phone_id = null
 									WHERE phone_id = $1`, phoneId)
 }
+
+func (r *SimRepository) SelectAll() ([]models.SimInfo, error) {
+	rows, err := r.storage.db.Query(`SELECT * FROM sim_cards`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var simCards []models.SimInfo
+
+	for rows.Next() {
+		var sim models.SimInfo
+
+		err := rows.Scan(
+			&sim.Id,
+			&sim.PhoneId,
+			&sim.PhoneNumber,
+			&sim.Operator,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		simCards = append(simCards, sim)
+	}
+
+	return simCards, nil
+}

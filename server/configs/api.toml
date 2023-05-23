@@ -1,4 +1,4 @@
-bind_addr = ":8080"
+bind_addr = ":9777"
 log_level = "debug"
 
 [storage]
