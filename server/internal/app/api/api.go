@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"io"
+	"mime"
 	"net/http"
 	"path/filepath"
 	"server/internal/app/config"
@@ -62,25 +63,12 @@ func (s *Server) configureRouter() {
 	api.HandleFunc("/phone_info", s.handlePhoneInfo())
 	api.HandleFunc("/devices", s.handleDevices())
 
-	mimeTypes := map[string]string{
-		".css":  "text/css",
-		".js":   "application/javascript",
-		".json": "application/json",
-	}
-
 	fs := http.FileServer(http.Dir("./static/dist"))
 
-	fs = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		ext := filepath.Ext(path)
-		if mimeType, ok := mimeTypes[ext]; ok {
-			w.Header().Set("Content-Type", mimeType)
-		}
-		fs.ServeHTTP(w, r)
-	})
+	s.router.PathPrefix("/api").Handler(api)
+	s.router.PathPrefix("/").HandlerFunc(staticHandler(fs))
 
-	s.router.PathPrefix("/").Handler(indexHandler())
-	s.router.NotFoundHandler = notFoundHandler()
+	s.router.NotFoundHandler = notFoundHandler(fs)
 
 	s.router.Use(corsMiddleware)
 }
@@ -110,15 +98,28 @@ func (s *Server) configureStorage() error {
 	return nil
 }
 
-func indexHandler() http.HandlerFunc {
+func staticHandler(fs http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./static/dist/index.html")
+		path := r.URL.Path
+		ext := filepath.Ext(path)
+
+		if ext == "" {
+			http.ServeFile(w, r, "./static/dist/index.html")
+			return
+		}
+
+		mimeType := mime.TypeByExtension(ext)
+		if mimeType != "" {
+			w.Header().Set("Content-Type", mimeType)
+		}
+
+		fs.ServeHTTP(w, r)
 	}
 }
 
-func notFoundHandler() http.HandlerFunc {
+func notFoundHandler(fs http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./static/dist/index.html")
+		fs.ServeHTTP(w, r)
 	}
 }
 
