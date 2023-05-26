@@ -2,4 +2,4 @@ bind_addr = ":9777"
 log_level = "debug"
 
 [storage]
-db_url = "host=localhost dbname=PhoneTracker sslmode=disable"
+db_url = "host=dpg-choel6rhp8u2m2tdlulg-a dbname=phonetracker sslmode=disable user=phonetracker_user password=3N3j87a0drzz31VcGpoNwqS2R2GDFqtn"
