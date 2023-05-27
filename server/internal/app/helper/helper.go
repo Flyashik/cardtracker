@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"server/internal/app/models"
+	"strings"
 )
 
 const DataPath = "data"
@@ -43,13 +44,10 @@ func ConvertModelTagToMarketingName(modelTag string) (string, error) {
 
 	for {
 		rec, err := reader.Read()
-		if err != nil {
-			return "", err
-		}
 		if err == io.EOF {
-			return "", nil
+			return modelTag, nil
 		}
-		if rec[2] == modelTag {
+		if strings.ToLower(rec[2]) == strings.ToLower(modelTag) {
 			return rec[1], nil
 		}
 	}
