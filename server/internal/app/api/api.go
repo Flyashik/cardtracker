@@ -189,6 +189,17 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 			}
 		}
 
+		query := r.URL.Query().Get("user_info_needed")
+		if query == "true" {
+
+			// TODO здесь вытянем из бд юзера по authorization_id
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode("Пока заглушка"); err != nil {
+				s.logger.Error(err)
+			}
+		}
+
 		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
 	}
 }
