@@ -3,8 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 	"io"
 	"mime"
 	"net/http"
@@ -13,6 +11,11 @@ import (
 	"server/internal/app/helper"
 	"server/internal/app/models"
 	"server/internal/app/storage"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -62,6 +65,9 @@ func (s *Server) configureRouter() {
 	api.HandleFunc("/test", s.handleTest())
 	api.HandleFunc("/phone_info", s.handlePhoneInfo())
 	api.HandleFunc("/devices", s.handleDevices())
+	api.HandleFunc("/login", s.handleLogin())
+	api.HandleFunc("/logout", s.handleLogout())
+	api.HandleFunc("/register", s.handleRegister())
 
 	fs := http.FileServer(http.Dir("./static/dist"))
 
@@ -225,5 +231,125 @@ func (s *Server) handleDevices() http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
+	}
+}
+
+// TODO: заменить на что-то адекватное
+var jwtKey = []byte("very_secret_key")
+
+func (s *Server) handleLogin() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var user models.User
+
+		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var existingUser models.User
+
+		//TODO: достать пользователя из базы по email
+
+		// TODO check user email
+		if user.Email != "example@ex.com" {
+			http.Error(w, "user does not exist", http.StatusBadRequest)
+			return
+		}
+
+		errHash := helper.CompareHashPassword(user.Password, existingUser.Password)
+		if !errHash {
+			http.Error(w, "invalid password", http.StatusBadRequest)
+			return
+		}
+
+		expirationTime := time.Now().Add(24 * time.Hour)
+
+		claims := &models.Claims{
+			Role: existingUser.Role,
+			StandardClaims: jwt.StandardClaims{
+				Subject:   existingUser.Email,
+				ExpiresAt: expirationTime.Unix(),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+		tokenString, err := token.SignedString(jwtKey)
+		if err != nil {
+			http.Error(w, "could not generate token", http.StatusInternalServerError)
+			return
+		}
+
+		cookie := &http.Cookie{
+			Name:     "token",
+			Value:    tokenString,
+			Expires:  expirationTime,
+			Path:     "/",
+			Domain:   "localhost",
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+		}
+		http.SetCookie(w, cookie)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
+	}
+}
+
+func (s *Server) handleLogout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie := &http.Cookie{
+			Name:     "token",
+			Value:    "",
+			Expires:  time.Unix(0, 0),
+			Path:     "/",
+			Domain:   "localhost",
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+		}
+		http.SetCookie(w, cookie)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
+	}
+}
+
+func (s *Server) handleRegister() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var user models.User
+
+		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var existingUser models.User
+
+//		err := models.DB.Where("email = ?", user.Email).First(&existingUser).Error
+		if err == nil {
+			http.Error(w, "user already exists", http.StatusBadRequest)
+			return
+		}
+
+		var errHash error
+		user.Password, errHash = helper.GenerateHashPassword(user.Password)
+		if errHash != nil {
+			http.Error(w, "could not generate password hash", http.StatusInternalServerError)
+			return
+		}
+
+//		err = models.DB.Create(&user).Error
+		if err != nil {
+			http.Error(w, "could not create user", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
 	}
 }
