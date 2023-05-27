@@ -29,3 +29,12 @@ CREATE TABLE IF NOT EXISTS sd_cards (
     used_space INT NOT NULL,
     free_space INT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    user_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code INT NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(255) NOT NULL
+);
