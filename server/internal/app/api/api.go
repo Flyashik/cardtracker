@@ -246,19 +246,19 @@ func (s *Server) handleLogin() http.HandlerFunc {
 			return
 		}
 
-		var existingUser models.User
+		var existingUser *models.User
 
-		//TODO: достать пользователя из базы по email
+		existingUser, err := s.storage.User().SelectByEmail(user.Email)
 
 		// TODO check user email
-		if user.Email != "example@ex.com" {
-			http.Error(w, "user does not exist", http.StatusBadRequest)
+		if err != nil {
+			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
 		}
 
 		errHash := helper.CompareHashPassword(user.Password, existingUser.Password)
 		if !errHash {
-			http.Error(w, "invalid password", http.StatusBadRequest)
+			http.Error(w, "Invalid password", http.StatusBadRequest)
 			return
 		}
 
@@ -327,9 +327,9 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
-		var existingUser models.User
+		//		var existingUser *models.User
 
-//		err := models.DB.Where("email = ?", user.Email).First(&existingUser).Error
+		_, err := s.storage.User().SelectByEmail(user.Email)
 		if err == nil {
 			http.Error(w, "user already exists", http.StatusBadRequest)
 			return
@@ -342,9 +342,10 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
-//		err = models.DB.Create(&user).Error
+//		var result *models.User
+		_, err = s.storage.User().Create(&user)
 		if err != nil {
-			http.Error(w, "could not create user", http.StatusInternalServerError)
+			http.Error(w, "Could not create user", http.StatusInternalServerError)
 			return
 		}
 

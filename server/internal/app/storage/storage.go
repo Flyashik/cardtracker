@@ -12,6 +12,7 @@ type Storage struct {
 	phoneRepository *PhoneRepository
 	simRepository   *SimRepository
 	sdRepository    *SdRepository
+	userRepository  *UserRepository
 }
 
 func New(config *DbConfig) *Storage {
@@ -49,6 +50,18 @@ func (s *Storage) Phone() *PhoneRepository {
 	}
 
 	return s.phoneRepository
+}
+
+func (s *Storage) User() *UserRepository {
+	if s.userRepository != nil {
+		return s.userRepository
+	}
+
+	s.userRepository = &UserRepository{
+		storage: s,
+	}
+
+	return s.userRepository
 }
 
 func (s *Storage) Sim() *SimRepository {
