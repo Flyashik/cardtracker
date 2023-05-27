@@ -70,13 +70,10 @@ func ConvertManufacturerIdToCompanyName(manufacturerId string) (string, error) {
 
 	for {
 		rec, err := reader.Read()
-		if err != nil {
-			return "", err
-		}
 		if err == io.EOF {
-			return "", nil
+			return manufacturerId, nil
 		}
-		if rec[1] == manufacturerId {
+		if strings.ToLower(rec[1]) == strings.ToLower(manufacturerId) {
 			return rec[0], nil
 		}
 	}
