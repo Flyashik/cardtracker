@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -354,6 +355,16 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
+		random := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+		var userCode int
+		for {
+			userCode = random.Intn(99999-10000) + 10000
+			if !s.storage.User().CheckCodeExists(userCode) {
+				break
+			}
+		}
+		user.Code = userCode
 		_, err = s.storage.User().Create(&user)
 		if err != nil {
 			s.logger.Info(fmt.Sprintf(`%s, %d`, err, http.StatusInternalServerError))
