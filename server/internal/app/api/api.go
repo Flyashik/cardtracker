@@ -83,7 +83,7 @@ func (s *Server) configureRouter() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080, http://localhost:9111, https://cardtracker.onrender.com")
+		w.Header().Set("Access-Control-Allow-Origin", "https://cardtracker.onrender.com")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT")
 		w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Set-Cookie")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -341,7 +341,8 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
+		user.Role = "user"
+		//TODO вот здесь сгенерить код надо
 		_, err := s.storage.User().SelectByEmail(user.Email)
 		if err == nil {
 			http.Error(w, "user already exists", http.StatusBadRequest)
