@@ -303,8 +303,6 @@ func (s *Server) handleLogin() http.HandlerFunc {
 			Name:    "token",
 			Value:   tokenString,
 			Expires: expirationTime,
-			Path:    "/",
-			Domain:  "localhost",
 		}
 		http.SetCookie(w, cookie)
 
