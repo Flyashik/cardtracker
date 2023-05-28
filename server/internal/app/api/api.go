@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"server/internal/app/config"
 	"server/internal/app/helper"
+	"server/internal/app/middlewares"
 	"server/internal/app/models"
 	"server/internal/app/storage"
 	"time"
@@ -62,9 +63,10 @@ func (s *Server) configureLogger() error {
 
 func (s *Server) configureRouter() {
 	api := s.router.PathPrefix("/api").Subrouter()
+
 	api.HandleFunc("/test", s.handleTest())
-	api.HandleFunc("/phone_info", s.handlePhoneInfo())
-	api.HandleFunc("/devices", s.handleDevices())
+	api.HandleFunc("/phone_info", middlewares.IsAuthorized(s.handlePhoneInfo()))
+	api.HandleFunc("/devices", middlewares.IsAuthorized(s.handleDevices()))
 	api.HandleFunc("/login", s.handleLogin())
 	api.HandleFunc("/logout", s.handleLogout())
 	api.HandleFunc("/register", s.handleRegister())
@@ -141,7 +143,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 			Phone   models.Phone     `json:"phone_info"`
 			SimInfo []models.SimInfo `json:"sim_info"`
 			SdInfo  []models.SdInfo  `json:"sd_info"`
-			AuthID  uint             `json:"authorization_id"`
+			AuthID  int              `json:"authorization_id"`
 		}
 
 		body, err := io.ReadAll(r.Body)
@@ -198,8 +200,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 		query := r.URL.Query().Get("user_info_needed")
 		if query == "true" {
 
-			//TODO: Пофиксить несоответствие int\uint
-			user, err := s.storage.User().SelectByCode(int(resp.AuthID))
+			user, err := s.storage.User().SelectByCode(resp.AuthID)
 			if err != nil {
 				s.logger.Error(err)
 				w.WriteHeader(http.StatusNotFound)
@@ -345,8 +346,6 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
-		//		var existingUser *models.User
-
 		_, err := s.storage.User().SelectByEmail(user.Email)
 		if err == nil {
 			http.Error(w, "user already exists", http.StatusBadRequest)
@@ -360,7 +359,6 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
-		//		var result *models.User
 		_, err = s.storage.User().Create(&user)
 		if err != nil {
 			s.logger.Info(fmt.Sprintf(`%s, %d`, err, http.StatusInternalServerError))
