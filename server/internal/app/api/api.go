@@ -198,10 +198,17 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 		query := r.URL.Query().Get("user_info_needed")
 		if query == "true" {
 
-			// TODO здесь вытянем из бд юзера по authorization_id
+			//TODO: Пофиксить несоответствие int\uint
+			user, err := s.storage.User().SelectByCode(int(resp.AuthID))
+			if err != nil {
+				s.logger.Error(err)
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode("Пока заглушка"); err != nil {
+			w.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(w).Encode(user); err != nil {
 				s.logger.Error(err)
 			}
 		}
@@ -353,9 +360,10 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
-//		var result *models.User
+		//		var result *models.User
 		_, err = s.storage.User().Create(&user)
 		if err != nil {
+			s.logger.Info(fmt.Sprintf(`%s, %d`, err, http.StatusInternalServerError))
 			http.Error(w, "Could not create user", http.StatusInternalServerError)
 			return
 		}

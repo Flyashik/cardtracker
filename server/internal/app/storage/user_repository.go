@@ -38,6 +38,25 @@ func (r *UserRepository) SelectByEmail(email string) (*models.User, error) {
 	return u, nil
 }
 
+func (r *UserRepository) SelectByCode(code int) (*models.User, error) {
+	u := &models.User{}
+
+	err := r.storage.db.QueryRow("SELECT * FROM users WHERE code = $1 LIMIT 1",
+		code).Scan(
+		&u.Id,
+		&u.Name,
+		&u.Code,
+		&u.Email,
+		&u.Password,
+		&u.Role)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
 func (r *UserRepository) SelectAll() ([]models.User, error) {
 	rows, err := r.storage.db.Query(`SELECT * FROM users`)
 	if err != nil {
