@@ -300,14 +300,11 @@ func (s *Server) handleLogin() http.HandlerFunc {
 		}
 
 		cookie := &http.Cookie{
-			Name:     "token",
-			Value:    tokenString,
-			Expires:  expirationTime,
-			Path:     "/",
-			Domain:   "localhost",
-			HttpOnly: true,
-			Secure:   true,
-			SameSite: http.SameSiteStrictMode,
+			Name:    "token",
+			Value:   tokenString,
+			Expires: expirationTime,
+			Path:    "/",
+			Domain:  "localhost",
 		}
 		http.SetCookie(w, cookie)
 
@@ -320,14 +317,11 @@ func (s *Server) handleLogin() http.HandlerFunc {
 func (s *Server) handleLogout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie := &http.Cookie{
-			Name:     "token",
-			Value:    "",
-			Expires:  time.Unix(0, 0),
-			Path:     "/",
-			Domain:   "localhost",
-			HttpOnly: true,
-			Secure:   true,
-			SameSite: http.SameSiteStrictMode,
+			Name:    "token",
+			Value:   "",
+			Expires: time.Unix(0, 0),
+			Path:    "/",
+			Domain:  "localhost",
 		}
 		http.SetCookie(w, cookie)
 
