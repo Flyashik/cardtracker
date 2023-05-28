@@ -10,7 +10,7 @@ type UserRepository struct {
 
 func (r *UserRepository) Create(u *models.User) (*models.User, error) {
 	err := r.storage.db.QueryRow(`INSERT INTO users (email,name,code,password,role)
-VALUES ($1, $2, $3, $4, $5)`,
+										VALUES ($1, $2, $3, $4, $5) RETURNING user_id`,
 		u.Email, u.Name, u.Code, u.Password, u.Role).Scan(&u.Id)
 	if err != nil {
 		return nil, err

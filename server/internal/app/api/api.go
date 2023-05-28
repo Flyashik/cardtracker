@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"server/internal/app/config"
 	"server/internal/app/helper"
+	"server/internal/app/middlewares"
 	"server/internal/app/models"
 	"server/internal/app/storage"
 	"time"
@@ -63,9 +64,10 @@ func (s *Server) configureLogger() error {
 
 func (s *Server) configureRouter() {
 	api := s.router.PathPrefix("/api").Subrouter()
+
 	api.HandleFunc("/test", s.handleTest())
-	api.HandleFunc("/phone_info", s.handlePhoneInfo())
-	api.HandleFunc("/devices", s.handleDevices())
+	api.HandleFunc("/phone_info", middlewares.IsAuthorized(s.handlePhoneInfo()))
+	api.HandleFunc("/devices", middlewares.IsAuthorized(s.handleDevices()))
 	api.HandleFunc("/login", s.handleLogin())
 	api.HandleFunc("/logout", s.handleLogout())
 	api.HandleFunc("/register", s.handleRegister())
@@ -82,9 +84,11 @@ func (s *Server) configureRouter() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080, http://localhost:9111, https://cardtracker.onrender.com")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Set-Cookie")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Expose-Headers", "Set-Cookie")
 
 		if r.Method == http.MethodOptions {
 			return
@@ -142,7 +146,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 			Phone   models.Phone     `json:"phone_info"`
 			SimInfo []models.SimInfo `json:"sim_info"`
 			SdInfo  []models.SdInfo  `json:"sd_info"`
-			AuthID  uint             `json:"authorization_id"`
+			AuthID  int              `json:"authorization_id"`
 		}
 
 		body, err := io.ReadAll(r.Body)
@@ -199,8 +203,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 		query := r.URL.Query().Get("user_info_needed")
 		if query == "true" {
 
-			//TODO: Пофиксить несоответствие int\uint
-			user, err := s.storage.User().SelectByCode(int(resp.AuthID))
+			user, err := s.storage.User().SelectByCode(resp.AuthID)
 			if err != nil {
 				s.logger.Error(err)
 				w.WriteHeader(http.StatusNotFound)
@@ -300,14 +303,9 @@ func (s *Server) handleLogin() http.HandlerFunc {
 		}
 
 		cookie := &http.Cookie{
-			Name:     "token",
-			Value:    tokenString,
-			Expires:  expirationTime,
-			Path:     "/",
-			Domain:   "localhost",
-			HttpOnly: true,
-			Secure:   true,
-			SameSite: http.SameSiteStrictMode,
+			Name:    "token",
+			Value:   tokenString,
+			Expires: expirationTime,
 		}
 		http.SetCookie(w, cookie)
 
@@ -320,14 +318,11 @@ func (s *Server) handleLogin() http.HandlerFunc {
 func (s *Server) handleLogout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie := &http.Cookie{
-			Name:     "token",
-			Value:    "",
-			Expires:  time.Unix(0, 0),
-			Path:     "/",
-			Domain:   "localhost",
-			HttpOnly: true,
-			Secure:   true,
-			SameSite: http.SameSiteStrictMode,
+			Name:    "token",
+			Value:   "",
+			Expires: time.Unix(0, 0),
+			Path:    "/",
+			Domain:  "localhost",
 		}
 		http.SetCookie(w, cookie)
 
@@ -346,8 +341,6 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
-		//		var existingUser *models.User
-
 		_, err := s.storage.User().SelectByEmail(user.Email)
 		if err == nil {
 			http.Error(w, "user already exists", http.StatusBadRequest)
@@ -361,7 +354,6 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
-
 		random := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 		var userCode int
@@ -372,7 +364,6 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			}
 		}
 		user.Code = userCode
-
 		_, err = s.storage.User().Create(&user)
 		if err != nil {
 			s.logger.Info(fmt.Sprintf(`%s, %d`, err, http.StatusInternalServerError))

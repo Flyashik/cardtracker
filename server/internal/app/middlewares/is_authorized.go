@@ -11,7 +11,7 @@ func IsAuthorized(next http.HandlerFunc) http.HandlerFunc {
 		cookie, err := r.Cookie("token")
 
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
