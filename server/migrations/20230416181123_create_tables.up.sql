@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS user_phone (
     user_id INT REFERENCES users (user_id),
-    phone_id INT REFERENCES phones (phone_id)
+    phone_id INT REFERENCES phones (phone_id) UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS notifications (
