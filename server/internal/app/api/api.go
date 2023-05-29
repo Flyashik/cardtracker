@@ -66,7 +66,7 @@ func (s *Server) configureRouter() {
 	api := s.router.PathPrefix("/api").Subrouter()
 
 	api.HandleFunc("/test", s.handleTest())
-	api.HandleFunc("/phone_info", middlewares.IsAuthorized(s.handlePhoneInfo()))
+	api.HandleFunc("/phone_info", s.handlePhoneInfo())
 	api.HandleFunc("/devices", middlewares.IsAuthorized(s.handleDevices()))
 	api.HandleFunc("/login", s.handleLogin())
 	api.HandleFunc("/logout", s.handleLogout())
