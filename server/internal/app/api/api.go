@@ -68,6 +68,7 @@ func (s *Server) configureRouter() {
 	api.HandleFunc("/test", s.handleTest())
 	api.HandleFunc("/phone_info", s.handlePhoneInfo())
 	api.HandleFunc("/devices", middlewares.IsAuthorized(s.handleDevices()))
+	api.HandleFunc("/user", middlewares.IsAuthorized(s.handleUser()))
 	api.HandleFunc("/login", s.handleLogin())
 	api.HandleFunc("/logout", s.handleLogout())
 	api.HandleFunc("/register", s.handleRegister())
@@ -373,6 +374,32 @@ func (s *Server) handleRegister() http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
+	}
+}
+
+func (s *Server) handleUser() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("token")
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		claims, err := helper.ParseToken(cookie.Value)
+
+		if err != nil {
+			http.Error(w, "Incorrect token", http.StatusBadRequest)
+			return
+		}
+		u, err := s.storage.User().SelectByEmail(claims.StandardClaims.Subject)
+		if err != nil {
+			http.Error(w, "Can't fetch user", http.StatusBadRequest)
+		}
+		u.Password = ""
+		u.Role = ""
+		json.NewEncoder(w).Encode(u)
 		w.WriteHeader(http.StatusOK)
 		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
 	}
