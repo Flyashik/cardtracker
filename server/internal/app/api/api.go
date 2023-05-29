@@ -290,14 +290,14 @@ func (s *Server) handleDevices() http.HandlerFunc {
 
 func (s *Server) handleNotifications() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		modelTag := r.URL.Query().Get("model_tag")
-		if modelTag == "" {
+		modelNumber := r.URL.Query().Get("model_number")
+		if modelNumber == "" {
 			s.logger.Info(`[Notifications] There was no parameter in request`)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		notificationList, err := s.storage.Notification().SelectByModelTag(modelTag)
+		notificationList, err := s.storage.Notification().SelectByModelTag(modelNumber)
 		if err != nil {
 			s.logger.Info(`[Notifications] Error while fetching notifications by tag`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
