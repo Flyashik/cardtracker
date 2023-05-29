@@ -155,6 +155,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
+			s.logger.Info(`[Phone info] Error when reading request body`)
 			s.logger.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -164,6 +165,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 		var resp *Info
 		err = json.Unmarshal(body, &resp)
 		if err != nil {
+			s.logger.Info(`[Phone info] Error when unmarshalling request body`)
 			s.logger.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -171,6 +173,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 
 		resp.Phone.ModelTag, err = helper.ConvertModelTagToMarketingName(resp.Phone.ModelTag)
 		if err != nil {
+			s.logger.Info(`[Phone info] Error when translating model tag`)
 			s.logger.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -180,6 +183,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 
 		phone, err := s.storage.Phone().Create(&resp.Phone)
 		if err != nil {
+			s.logger.Info(`[Phone info] Error when creating phone`)
 			s.logger.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -189,6 +193,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 		for _, sim := range resp.SimInfo {
 			_, err := s.storage.Sim().Create(&sim, phone)
 			if err != nil {
+				s.logger.Info(`[Phone info] Error while creating sim`)
 				s.logger.Error(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -199,12 +204,14 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 		for _, sd := range resp.SdInfo {
 			sd.SdManufacturerId, err = helper.ConvertManufacturerIdToCompanyName(sd.SdManufacturerId)
 			if err != nil {
+				s.logger.Info(`[Phone info] Error while translating sd info`)
 				s.logger.Error(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			_, err := s.storage.SdCard().Create(&sd, phone)
 			if err != nil {
+				s.logger.Info(`[Phone info] Error while creating sd card`)
 				s.logger.Error(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -213,6 +220,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 
 		user, err := s.storage.User().SelectByCode(resp.AuthID)
 		if err != nil {
+			s.logger.Info(`[Phone info] Error while finding user by code`)
 			s.logger.Error(err)
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -220,6 +228,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 
 		err = s.storage.UserPhone().CreateRelation(user.Id, phone.Id)
 		if err != nil {
+			s.logger.Info(`[Phone info] Error while creating relation`)
 			s.logger.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -228,6 +237,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 		if query == "true" {
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(user); err != nil {
+				s.logger.Info(`[Phone info] Error while encoding json`)
 				s.logger.Error(err)
 				w.WriteHeader(http.StatusInternalServerError)
 			}
@@ -247,18 +257,21 @@ func (s *Server) handleDevices() http.HandlerFunc {
 
 		phones, err := s.storage.Phone().SelectAll()
 		if err != nil {
+			s.logger.Info(`[Devices info] Error while fetching phones`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusInternalServerError))
 			http.Error(w, "Failed fetch phones", http.StatusInternalServerError)
 			return
 		}
 		simCards, err := s.storage.Sim().SelectAll()
 		if err != nil {
+			s.logger.Info(`[Devices info] Error while fetching sim cards`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusInternalServerError))
 			http.Error(w, "Failed fetch simcards", http.StatusInternalServerError)
 			return
 		}
 		sdCards, err := s.storage.SdCard().SelectAll()
 		if err != nil {
+			s.logger.Info(`[Devices info] Error while fetching sd cards`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusInternalServerError))
 			http.Error(w, "Failed fetch sdcards", http.StatusInternalServerError)
 			return
@@ -279,12 +292,14 @@ func (s *Server) handleNotifications() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		modelTag := r.URL.Query().Get("model_tag")
 		if modelTag == "" {
+			s.logger.Info(`[Notifications] There was no parameter in request`)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		notificationList, err := s.storage.Notification().SelectByModelTag(modelTag)
 		if err != nil {
+			s.logger.Info(`[Notifications] Error while fetching notifications by tag`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -319,6 +334,7 @@ func (s *Server) handleLogin() http.HandlerFunc {
 
 		// TODO check user email
 		if err != nil {
+			s.logger.Info(`[Login] Error while fetching user by email`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusBadRequest))
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
@@ -326,6 +342,7 @@ func (s *Server) handleLogin() http.HandlerFunc {
 
 		errHash := helper.CompareHashPassword(user.Password, existingUser.Password)
 		if !errHash {
+			s.logger.Info(`[Login] Error while testing password`)
 			http.Error(w, "Invalid password", http.StatusBadRequest)
 			return
 		}
@@ -344,6 +361,7 @@ func (s *Server) handleLogin() http.HandlerFunc {
 
 		tokenString, err := token.SignedString(jwtKey)
 		if err != nil {
+			s.logger.Info(`[Login] Error while generating jwt`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusInternalServerError))
 			http.Error(w, "could not generate token", http.StatusInternalServerError)
 			return
@@ -384,12 +402,14 @@ func (s *Server) handleRegister() http.HandlerFunc {
 		var user models.User
 
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			s.logger.Info(`[Register] Error while decoding json`)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		user.Role = "user"
 		_, err := s.storage.User().SelectByEmail(user.Email)
 		if err == nil {
+			s.logger.Info(`[Register] Error while checking for user existance`)
 			http.Error(w, "user already exists", http.StatusBadRequest)
 			return
 		}
@@ -397,6 +417,7 @@ func (s *Server) handleRegister() http.HandlerFunc {
 		var errHash error
 		user.Password, errHash = helper.GenerateHashPassword(user.Password)
 		if errHash != nil {
+			s.logger.Info(`[Register] Error while generating passwordl`)
 			http.Error(w, "could not generate password hash", http.StatusInternalServerError)
 			return
 		}
@@ -413,6 +434,7 @@ func (s *Server) handleRegister() http.HandlerFunc {
 		user.Code = userCode
 		_, err = s.storage.User().Create(&user)
 		if err != nil {
+			s.logger.Info(`[Register] Error while creating user`)
 			s.logger.Error(fmt.Sprintf(`%s, %d`, err, http.StatusInternalServerError))
 			http.Error(w, "Could not create user", http.StatusInternalServerError)
 			return
@@ -428,6 +450,7 @@ func (s *Server) handleUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("token")
 		if err != nil {
+			s.logger.Info(`[User] Error while checking cookie`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusUnauthorized))
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -436,12 +459,14 @@ func (s *Server) handleUser() http.HandlerFunc {
 		claims, err := helper.ParseToken(cookie.Value)
 
 		if err != nil {
+			s.logger.Info(`[User] Error while checking jwt`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusUnauthorized))
 			http.Error(w, "Incorrect token", http.StatusUnauthorized)
 			return
 		}
 		u, err := s.storage.User().SelectByEmail(claims.StandardClaims.Subject)
 		if err != nil {
+			s.logger.Info(`[User] Error while checking user by email`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
 			http.Error(w, "Can't fetch user", http.StatusNotFound)
 		}
@@ -456,6 +481,7 @@ func (s *Server) handleNewNotification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
+			s.logger.Info(`[NewNotification] Error while reading body`)
 			s.logger.Error(err)
 			return
 		}
@@ -464,12 +490,14 @@ func (s *Server) handleNewNotification() http.HandlerFunc {
 		var resp *models.Notification
 		err = json.Unmarshal(body, &resp)
 		if err != nil {
+			s.logger.Info(`[NewNotification] Error while decoding json`)
 			s.logger.Error(err)
 			return
 		}
 
 		_, err = s.storage.Notification().Create(resp)
 		if err != nil {
+			s.logger.Info(`[NewNotification] Error while creating notification`)
 			s.logger.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -485,6 +513,7 @@ func (s *Server) handleUsers() http.HandlerFunc {
 
 		users, err := s.storage.UserPhone().SelectUsersWithPhones()
 		if err != nil {
+			s.logger.Info(`[Users] Error while selecting users with phones`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
 			w.WriteHeader(http.StatusNotFound)
 		}
