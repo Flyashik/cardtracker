@@ -306,6 +306,7 @@ func (s *Server) handleLogin() http.HandlerFunc {
 			Name:    "token",
 			Value:   tokenString,
 			Expires: expirationTime,
+			Path:     "/",
 		}
 		http.SetCookie(w, cookie)
 
