@@ -74,6 +74,7 @@ func (s *Server) configureRouter() {
 	api.HandleFunc("/login", s.handleLogin())
 	api.HandleFunc("/logout", s.handleLogout())
 	api.HandleFunc("/register", s.handleRegister())
+	api.HandleFunc("/new_notification", s.handleNewNotification())
 
 	fs := http.FileServer(http.Dir("./static/dist"))
 
@@ -447,6 +448,34 @@ func (s *Server) handleUser() http.HandlerFunc {
 		u.Password = ""
 		u.Role = ""
 		json.NewEncoder(w).Encode(u)
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
+	}
+}
+
+func (s *Server) handleNewNotification() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			s.logger.Error(err)
+			return
+		}
+		r.Body.Close()
+
+		var resp *models.Notification
+		err = json.Unmarshal(body, &resp)
+		if err != nil {
+			s.logger.Error(err)
+			return
+		}
+
+		_, err = s.storage.Notification().Create(resp)
+		if err != nil {
+			s.logger.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
 	}
 }
