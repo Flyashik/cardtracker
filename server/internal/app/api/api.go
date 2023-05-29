@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -71,6 +72,7 @@ func (s *Server) configureRouter() {
 	api.HandleFunc("/login", s.handleLogin())
 	api.HandleFunc("/logout", s.handleLogout())
 	api.HandleFunc("/register", s.handleRegister())
+	api.HandleFunc("/notifications", s.handleNotifications())
 
 	fs := http.FileServer(http.Dir("./static/dist"))
 
@@ -256,6 +258,31 @@ func (s *Server) handleDevices() http.HandlerFunc {
 	}
 }
 
+func (s *Server) handleNotifications() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		modelTag := r.URL.Query().Get("model_tag")
+		if modelTag == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		notificationList, err := s.storage.Notification().SelectByModelTag(modelTag)
+		if err != nil {
+			s.logger.Error(err)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(notificationList); err != nil {
+			s.logger.Error(err)
+		}
+
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
+	}
+}
+
 // TODO: заменить на что-то адекватное
 var jwtKey = []byte("very_secret_key")
 
@@ -307,7 +334,6 @@ func (s *Server) handleLogin() http.HandlerFunc {
 			Value:   tokenString,
 			Expires: expirationTime,
 			Path:    "/",
-			Domain:  "localhost",
 		}
 		http.SetCookie(w, cookie)
 
@@ -324,7 +350,6 @@ func (s *Server) handleLogout() http.HandlerFunc {
 			Value:   "",
 			Expires: time.Unix(0, 0),
 			Path:    "/",
-			Domain:  "localhost",
 		}
 		http.SetCookie(w, cookie)
 
@@ -357,6 +382,16 @@ func (s *Server) handleRegister() http.HandlerFunc {
 			return
 		}
 
+		random := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+		var userCode int
+		for {
+			userCode = random.Intn(99999-10000) + 10000
+			if !s.storage.User().CheckCodeExists(userCode) {
+				break
+			}
+		}
+		user.Code = userCode
 		_, err = s.storage.User().Create(&user)
 		if err != nil {
 			s.logger.Info(fmt.Sprintf(`%s, %d`, err, http.StatusInternalServerError))

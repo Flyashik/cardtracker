@@ -57,6 +57,20 @@ func (r *UserRepository) SelectByCode(code int) (*models.User, error) {
 	return u, nil
 }
 
+func (r *UserRepository) CheckCodeExists(code int) bool {
+	res := false
+
+	err := r.storage.db.QueryRow("select exists(select 1 from users where code = $1)",
+		code).Scan(
+		&res)
+
+	if err != nil {
+		return false
+	}
+
+	return res
+}
+
 func (r *UserRepository) SelectAll() ([]models.User, error) {
 	rows, err := r.storage.db.Query(`SELECT * FROM users`)
 	if err != nil {
