@@ -71,6 +71,7 @@ func (s *Server) configureRouter() {
 	api.HandleFunc("/login", s.handleLogin())
 	api.HandleFunc("/logout", s.handleLogout())
 	api.HandleFunc("/register", s.handleRegister())
+	api.HandleFunc("/notifications", s.handleNotifications())
 
 	fs := http.FileServer(http.Dir("./static/dist"))
 
@@ -256,6 +257,31 @@ func (s *Server) handleDevices() http.HandlerFunc {
 	}
 }
 
+func (s *Server) handleNotifications() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		modelTag := r.URL.Query().Get("model_tag")
+		if modelTag == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		notificationList, err := s.storage.Notification().SelectByModelTag(modelTag)
+		if err != nil {
+			s.logger.Error(err)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(notificationList); err != nil {
+			s.logger.Error(err)
+		}
+
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
+	}
+}
+
 // TODO: заменить на что-то адекватное
 var jwtKey = []byte("very_secret_key")
 
@@ -306,7 +332,7 @@ func (s *Server) handleLogin() http.HandlerFunc {
 			Name:    "token",
 			Value:   tokenString,
 			Expires: expirationTime,
-			Path:     "/",
+			Path:    "/",
 		}
 		http.SetCookie(w, cookie)
 

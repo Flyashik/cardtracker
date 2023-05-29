@@ -7,12 +7,13 @@ import (
 )
 
 type Storage struct {
-	config          *DbConfig
-	db              *sql.DB
-	phoneRepository *PhoneRepository
-	simRepository   *SimRepository
-	sdRepository    *SdRepository
-	userRepository  *UserRepository
+	config                 *DbConfig
+	db                     *sql.DB
+	phoneRepository        *PhoneRepository
+	simRepository          *SimRepository
+	sdRepository           *SdRepository
+	userRepository         *UserRepository
+	notificationRepository *NotificationRepository
 }
 
 func New(config *DbConfig) *Storage {
@@ -86,4 +87,16 @@ func (s *Storage) SdCard() *SdRepository {
 	}
 
 	return s.sdRepository
+}
+
+func (s *Storage) Notification() *NotificationRepository {
+	if s.notificationRepository != nil {
+		return s.notificationRepository
+	}
+
+	s.notificationRepository = &NotificationRepository{
+		storage: s,
+	}
+
+	return s.notificationRepository
 }
