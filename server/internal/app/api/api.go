@@ -323,7 +323,6 @@ func (s *Server) handleLogout() http.HandlerFunc {
 			Value:   "",
 			Expires: time.Unix(0, 0),
 			Path:    "/",
-			Domain:  "localhost",
 		}
 		http.SetCookie(w, cookie)
 
