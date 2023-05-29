@@ -18,9 +18,9 @@ func (r *NotificationRepository) Create(n *models.Notification) (*models.Notific
 
 	return n, nil
 }
-
+// Не тег, а номер модели
 func (r *NotificationRepository) SelectByModelTag(tag string) ([]models.Notification, error) {
-	rows, err := r.storage.db.Query(`SELECT * FROM notifications WHERE model_tag = $1`, tag)
+	rows, err := r.storage.db.Query(`SELECT * FROM notifications WHERE model_number = $1`, tag)
 
 	if err != nil {
 		return nil, err
