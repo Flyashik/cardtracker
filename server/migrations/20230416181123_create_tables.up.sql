@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS user_phone (
 
 CREATE TABLE IF NOT EXISTS notifications (
     notification_id SERIAL PRIMARY KEY,
-    model_tag VARCHAR(255) NOT NULL,
-    source VARCHAR(255) NOT NULL,
+    model_number VARCHAR(255) NOT NULL,
+    notification_source VARCHAR(255) NOT NULL,
     sender VARCHAR(255) NOT NULL,
     body TEXT NOT NULL,
     timestamp BIGINT DEFAULT 0
