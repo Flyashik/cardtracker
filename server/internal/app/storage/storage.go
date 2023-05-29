@@ -14,6 +14,7 @@ type Storage struct {
 	sdRepository           *SdRepository
 	userRepository         *UserRepository
 	notificationRepository *NotificationRepository
+	userPhoneRepository    *UserPhoneRepository
 }
 
 func New(config *DbConfig) *Storage {
@@ -99,4 +100,16 @@ func (s *Storage) Notification() *NotificationRepository {
 	}
 
 	return s.notificationRepository
+}
+
+func (s *Storage) UserPhone() *UserPhoneRepository {
+	if s.userPhoneRepository != nil {
+		return s.userPhoneRepository
+	}
+
+	s.userPhoneRepository = &UserPhoneRepository{
+		storage: s,
+	}
+
+	return s.userPhoneRepository
 }
