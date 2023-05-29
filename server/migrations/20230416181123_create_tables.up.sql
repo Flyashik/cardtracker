@@ -38,3 +38,17 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     role VARCHAR(255) NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS user_phone (
+    user_id INT REFERENCES users (user_id),
+    phone_id INT REFERENCES phones (phone_id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id SERIAL PRIMARY KEY,
+    model_tag VARCHAR(255) NOT NULL,
+    source VARCHAR(255) NOT NULL,
+    sender VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    timestamp BIGINT DEFAULT 0
+);
