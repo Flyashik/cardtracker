@@ -466,7 +466,7 @@ func (s *Server) handleUser() http.HandlerFunc {
 		}
 		u, err := s.storage.User().SelectByEmail(claims.StandardClaims.Subject)
 		if err != nil {
-			s.logger.info(claims.StandardClaims.Subject)
+			s.logger.Info(claims.StandardClaims.Subject)
 			s.logger.Info(`[User] Error while checking user by email`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
 			http.Error(w, "Can't fetch user", http.StatusNotFound)
