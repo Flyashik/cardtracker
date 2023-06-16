@@ -72,7 +72,7 @@ func (r *UserRepository) CheckCodeExists(code int) bool {
 }
 
 func (r *UserRepository) SelectAll() ([]models.User, error) {
-	rows, err := r.storage.db.Query(`SELECT * FROM users`)
+	rows, err := r.storage.db.Query(`SELECT * FROM users ORDER BY user_id`)
 	if err != nil {
 		return nil, err
 	}
@@ -94,9 +94,17 @@ func (r *UserRepository) SelectAll() ([]models.User, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		u.Password = ""
 		users = append(users, u)
 	}
 
 	return users, nil
+}
+
+func (r *UserRepository) Delete(id int) error {
+	err := r.storage.db.QueryRow(`DELETE FROM users WHERE user_id = $1`, id).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }

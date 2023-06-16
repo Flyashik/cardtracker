@@ -2,5 +2,5 @@ bind_addr = ":9111"
 log_level = "debug"
 
 [storage]
-db_url = "host=dpg-choel6rhp8u2m2tdlulg-a.oregon-postgres.render.com dbname=phonetracker user=phonetracker_user password=3N3j87a0drzz31VcGpoNwqS2R2GDFqtn"
+db_url = "host=localhost dbname=PhoneTracker user=postgres password=hnxJpVsk3r sslmode=disable"
 #db_url = "host=dpg-choel6rhp8u2m2tdlulg-a dbname=phonetracker sslmode=disable user=phonetracker_user password=3N3j87a0drzz31VcGpoNwqS2R2GDFqtn"

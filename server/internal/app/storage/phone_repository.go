@@ -84,3 +84,12 @@ func (r *PhoneRepository) SelectAll() ([]models.Phone, error) {
 
 	return phones, nil
 }
+
+func (r *PhoneRepository) Delete(id int) error {
+	err := r.storage.db.QueryRow(`DELETE FROM phones WHERE phone_id = $1`, id).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

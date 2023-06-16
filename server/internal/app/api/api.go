@@ -13,6 +13,7 @@ import (
 	"server/internal/app/middlewares"
 	"server/internal/app/models"
 	"server/internal/app/storage"
+	"strconv"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -66,15 +67,18 @@ func (s *Server) configureRouter() {
 	api := s.router.PathPrefix("/api").Subrouter()
 
 	api.HandleFunc("/test", s.handleTest())
-	api.HandleFunc("/phone_info", s.handlePhoneInfo())
-	api.HandleFunc("/devices", middlewares.IsAuthorized(s.handleDevices()))
-	api.HandleFunc("/user", middlewares.IsAuthorized(s.handleUser()))
-	api.HandleFunc("/users", middlewares.IsAuthorized(s.handleUsers()))
-	api.HandleFunc("/notifications", middlewares.IsAuthorized(s.handleNotifications()))
-	api.HandleFunc("/login", s.handleLogin())
-	api.HandleFunc("/logout", s.handleLogout())
-	api.HandleFunc("/register", s.handleRegister())
-	api.HandleFunc("/new_notification", s.handleNewNotification())
+	api.HandleFunc("/phone_info", s.handlePhoneInfo()).Methods("POST", "OPTIONS")
+	api.HandleFunc("/devices", middlewares.IsAuthorized(s.handleDevices())).Methods("GET", "OPTIONS")
+	api.HandleFunc("/phone", middlewares.IsAuthorized(s.handleDeletePhone())).Methods("DELETE", "OPTIONS")
+	api.HandleFunc("/user", middlewares.IsAuthorized(s.handleUser())).Methods("GET", "OPTIONS")
+	api.HandleFunc("/user", middlewares.IsAuthorized(s.handleDeleteUser())).Methods("DELETE", "OPTIONS")
+	api.HandleFunc("/users_phones", middlewares.IsAuthorized(s.handleUserPhoneList())).Methods("GET", "OPTIONS")
+	api.HandleFunc("/notifications", middlewares.IsAuthorized(s.handleNotifications())).Methods("GET", "OPTIONS")
+	api.HandleFunc("/login", s.handleLogin()).Methods("POST", "OPTIONS")
+	api.HandleFunc("/logout", s.handleLogout()).Methods("POST", "OPTIONS")
+	api.HandleFunc("/register", s.handleRegister()).Methods("POST", "OPTIONS")
+	api.HandleFunc("/new_notification", s.handleNewNotification()).Methods("POST", "OPTIONS")
+	api.HandleFunc("/users", middlewares.IsAuthorized(s.handleUsers())).Methods("GET", "OPTIONS")
 
 	fs := http.FileServer(http.Dir("./static/dist"))
 
@@ -88,9 +92,9 @@ func (s *Server) configureRouter() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "https://cardtracker.onrender.com")
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT")
-		w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Set-Cookie")
+		w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Set-Cookie, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Expose-Headers", "Set-Cookie")
 
@@ -225,6 +229,7 @@ func (s *Server) handlePhoneInfo() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		user.Password = ""
 
 		err = s.storage.UserPhone().CreateRelation(user.Id, phone.Id)
 		if err != nil {
@@ -332,7 +337,6 @@ func (s *Server) handleLogin() http.HandlerFunc {
 
 		existingUser, err := s.storage.User().SelectByEmail(user.Email)
 
-		// TODO check user email
 		if err != nil {
 			s.logger.Info(`[Login] Error while fetching user by email`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusBadRequest))
@@ -410,14 +414,14 @@ func (s *Server) handleRegister() http.HandlerFunc {
 		_, err := s.storage.User().SelectByEmail(user.Email)
 		if err == nil {
 			s.logger.Info(`[Register] Error while checking for user existance`)
-			http.Error(w, "user already exists", http.StatusBadRequest)
+			http.Error(w, "user already exists", http.StatusConflict)
 			return
 		}
 
 		var errHash error
 		user.Password, errHash = helper.GenerateHashPassword(user.Password)
 		if errHash != nil {
-			s.logger.Info(`[Register] Error while generating passwordl`)
+			s.logger.Info(`[Register] Error while generating password`)
 			http.Error(w, "could not generate password hash", http.StatusInternalServerError)
 			return
 		}
@@ -448,31 +452,28 @@ func (s *Server) handleRegister() http.HandlerFunc {
 
 func (s *Server) handleUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("token")
-		if err != nil {
-			s.logger.Info(`[User] Error while checking cookie`)
-			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusUnauthorized))
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		sbj := r.Context().Value("subject").(string)
+		if sbj == "" {
+			s.logger.Info(`[User] Error in context`)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		claims, err := helper.ParseToken(cookie.Value)
-
+		u, err := s.storage.User().SelectByEmail(sbj)
 		if err != nil {
-			s.logger.Info(`[User] Error while checking jwt`)
-			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusUnauthorized))
-			http.Error(w, "Incorrect token", http.StatusUnauthorized)
-			return
-		}
-		u, err := s.storage.User().SelectByEmail(claims.StandardClaims.Subject)
-		if err != nil {
-			s.logger.Info(claims.StandardClaims.Subject)
+			cookie := &http.Cookie{
+				Name:    "token",
+				Value:   "",
+				Expires: time.Unix(0, 0),
+				Path:    "/",
+			}
+			http.SetCookie(w, cookie)
 			s.logger.Info(`[User] Error while checking user by email`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
 			http.Error(w, "Can't fetch user", http.StatusNotFound)
+			return
 		}
 		u.Password = ""
-		u.Role = ""
 		json.NewEncoder(w).Encode(u)
 		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
 	}
@@ -509,17 +510,103 @@ func (s *Server) handleNewNotification() http.HandlerFunc {
 	}
 }
 
-func (s *Server) handleUsers() http.HandlerFunc {
+func (s *Server) handleUserPhoneList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		users, err := s.storage.UserPhone().SelectUsersWithPhones()
 		if err != nil {
-			s.logger.Info(`[Users] Error while selecting users with phones`)
+			s.logger.Info(`[UserPhone] Error while selecting users with phones`)
 			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
 			w.WriteHeader(http.StatusNotFound)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(users)
+	}
+}
+
+func (s *Server) handleUsers() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		role := r.Context().Value("role")
+		if role != "admin" {
+			s.logger.Info(`[Users] Current user have not permission`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, "no permission", http.StatusForbidden))
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		users, err := s.storage.User().SelectAll()
+		if err != nil {
+			s.logger.Info(`[Users] Error while selecting users`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusNotFound))
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(users)
+	}
+}
+
+func (s *Server) handleDeleteUser() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		role := r.Context().Value("role")
+		if role != "admin" {
+			s.logger.Info(`[DeleteUser] Current user have not permission`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, "no permission", http.StatusForbidden))
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		id, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			s.logger.Info(`[DeleteUser] Can't parse user id`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusBadRequest))
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err = s.storage.User().Delete(id)
+		if err != nil {
+			s.logger.Info(`[DeleteUser] Error while deleting user`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusInternalServerError))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
+	}
+}
+
+func (s *Server) handleDeletePhone() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		role := r.Context().Value("role")
+		if role != "admin" {
+			s.logger.Info(`[DeletePhone] Current user have not permission`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, "no permission", http.StatusForbidden))
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		id, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			s.logger.Info(`[DeletePhone] Can't parse phone id`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusBadRequest))
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err = s.storage.Phone().Delete(id)
+		if err != nil {
+			s.logger.Info(`[DeletePhone] Error while deleting phone`)
+			s.logger.Error(fmt.Sprintf(`%s %d`, err, http.StatusInternalServerError))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		s.logger.Info(fmt.Sprintf(`%s %s%s %d`, r.Method, r.Host, r.RequestURI, http.StatusOK))
 	}
 }

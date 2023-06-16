@@ -15,14 +15,14 @@ CREATE TABLE IF NOT EXISTS phones (
 
 CREATE TABLE IF NOT EXISTS sim_cards (
     sim_card_id SERIAL PRIMARY KEY,
-    phone_id INT REFERENCES phones (phone_id),
+    phone_id INT REFERENCES phones (phone_id) ON DELETE SET NULL,
     phone_number VARCHAR(255) UNIQUE NOT NULL,
     operator VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS sd_cards (
     sd_card_id SERIAL PRIMARY KEY,
-    phone_id INT REFERENCES phones (phone_id),
+    phone_id INT REFERENCES phones (phone_id) ON DELETE SET NULL,
     sd_manufacturer_id VARCHAR(255) NOT NULL,
     serial_no VARCHAR(255) UNIQUE NOT NULL,
     total_space INT NOT NULL,
@@ -40,13 +40,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS user_phone (
-    user_id INT REFERENCES users (user_id),
-    phone_id INT REFERENCES phones (phone_id) UNIQUE
+    user_id INT REFERENCES users (user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    phone_id INT REFERENCES phones (phone_id) ON DELETE CASCADE ON UPDATE CASCADE UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS notifications (
     notification_id SERIAL PRIMARY KEY,
-    model_number VARCHAR(255) NOT NULL,
+    model_number VARCHAR(255) NOT NULL REFERENCES phones (model_number) ON DELETE CASCADE,
     notification_source VARCHAR(255) NOT NULL,
     sender VARCHAR(255) NOT NULL,
     body TEXT NOT NULL,
